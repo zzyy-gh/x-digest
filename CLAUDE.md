@@ -71,10 +71,9 @@ The orchestrator passes `filename` to all skills for consistent file naming acro
 
 When running all enabled lists:
 
-1. Process lists sequentially — each list completes its full pipeline (scrape → analyze → digest) before the next starts
+1. Process lists sequentially — each list completes its full pipeline before the next starts
 2. Both `playwright` and `playwright-headless` MCP servers share the same session directory
-3. If the next list needs a different `account`, clear the session directory (`C:\Users\zzyy\playwright-session\Default`) and re-login before starting that list
-4. If a session expires mid-run, re-run the login flow before continuing
+3. If a session expires mid-run, re-run the login flow before continuing
 
 ## Dependencies
 
