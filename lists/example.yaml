@@ -1,0 +1,9 @@
+name: "VC Feed"
+enabled: true
+account: "main"                  # Optional. Lists sharing an account use the same session.
+source: "following"              # "following" or X list URL (e.g. https://x.com/i/lists/123456)
+prompt: |
+  Focus on VC/startup activity, fundraising announcements,
+  AI infrastructure developments, and market-moving opinions.
+output_dir: "outputs"            # Relative to project root, or absolute path
+filename: "x-feed-digest"       # Prefix; date appended automatically

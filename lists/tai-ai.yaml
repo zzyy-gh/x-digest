@@ -1,0 +1,11 @@
+name: "TAI AI List"
+enabled: true
+account: "main"
+source: "https://x.com/i/lists/1982474997160714698"
+prompt: |
+  Focus on AI development, industry trends, macro news,
+  and items a VC might directly or indirectly benefit from knowing.
+  Cover model releases, infrastructure shifts, policy/regulation,
+  funding rounds, product launches, and strategic moves by major players.
+output_dir: "C:\\Users\\zzyy\\OneDrive\\aiconic\\daily feed\\tai x ai list daily feed"
+filename: "tai-ai"

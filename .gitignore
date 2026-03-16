@@ -1,0 +1,5 @@
+outputs/*.docx
+outputs/*.html
+outputs/*.md
+.env
+node_modules/
