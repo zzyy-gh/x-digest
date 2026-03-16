@@ -2,9 +2,9 @@
 name: x-scrape
 description: >
   Scrapes X.com feeds (Following or lists) — handles session detection, login flow,
-  following list extraction, and feed scraping. Returns raw post data for downstream analysis.
+  and feed scraping. Returns raw post data for downstream analysis.
   Trigger phrases: "scrape feed", "scrape following", "scrape my X", "get feed data".
-compatibility: "Requires playwright-headless MCP (primary) and playwright MCP (headed, for login). Both must share the same user-data-dir."
+compatibility: "Requires playwright (headed) and playwright-headless MCP servers."
 ---
 
 # X Feed Scraper
@@ -20,189 +20,112 @@ Receives from the pipeline orchestrator:
 - **`source`** — `"following"` or an X list URL (e.g. `https://x.com/i/lists/123456`)
 - **`days`** — lookback window (default: 1)
 - **`account`** — account identifier for session management
+- **`filename`** — file prefix for output naming
 
 ---
 
-## Step 1 — Detect session (headless first)
+## Browser Modes
 
-Use **playwright-headless** to navigate to `https://x.com/home`.
+Two MCP servers, both sharing `--user-data-dir` so sessions carry over:
 
-- If home timeline loads → session active, proceed.
-- If redirected to login → no session, go to Step 2.
-- Extract username:
-  ```js
-  document.querySelector('a[data-testid="AppTabBar_Profile_Link"]').href
-  ```
+- **`playwright-headless:browser_*`** — headless, used for all scraping/navigation/data collection
+- **`playwright:browser_*`** — headed, used only for login (Step 1.2)
 
 ---
 
-## Step 2 — Login flow (headed browser)
+## Step 1 — Auth
 
-Switch to **playwright** (headed).
+### 1.1 — Session check (headless)
 
-1. Tell user: *"No saved session found. Browser window is open — please log in (including 2FA). Let me know when done."*
-2. Navigate to `https://x.com/login`, wait for confirmation, verify URL is `/home`.
+Use `playwright-headless:browser_navigate` to navigate to `https://x.com/home`. Then **wait for the page to fully settle** — use `playwright-headless:browser_wait_for` with `textGone: "Loading"` or wait a few seconds — before inspecting the final URL. The initial navigation may briefly redirect to a login URL even when the session is valid.
 
----
+**Decision tree (check AFTER page has fully loaded):**
 
-## Step 3 — Scrape the following list (Following source only)
-Skip this step if source is an X list URL.
+1. **Final URL is still on `/i/flow/login` AND page snapshot shows login form elements** → not logged in → go to Step 1.2
+2. **Home timeline loads** (nav bar, profile link, timeline visible) → logged in. Extract current username from the Profile link in the snapshot (e.g., `/dailyupdat26439`).
+   Then check account:
+   - If `account` is specified in config → verify current username matches. If mismatch → go to Step 1.2
+   - If `account` is unset or `"main"` → accept whatever account is logged in, proceed to Step 1.3
 
-Navigate to `https://x.com/<username>/following` with **playwright-headless**.
+### 1.2 — Login (headed)
 
-Use the virtualised-DOM accumulator pattern:
+1. Close the headless browser: `playwright-headless:browser_close` (release session dir lock)
+2. If wrong account, clear the session:
+   ```bash
+   rm -rf "C:/Users/zzyy/playwright-session/Default"
+   ```
+3. Launch headed browser: `playwright:browser_navigate` to `https://x.com/login`
+4. Tell user: *"Browser window opened at x.com/login. Please log in as [account name] (including 2FA). I'll detect when you're done."*
+5. Poll with `playwright:browser_snapshot` every ~5 seconds. Check for:
+   - **Login success**: URL no longer contains `/login` or `/flow/` — user reached the home timeline → `playwright:browser_close` and go to Step 1.1
+   - **Browser closed**: MCP tool call returns an error / "no open tabs" → treat as session saved, go straight to Step 1.1 (re-opens headless)
+6. Go back to Step 1.1
 
-```js
-await page.evaluate(() => { window._following = {}; });
-await page.evaluate(() => window.scrollTo(0, 0));
-await page.waitForTimeout(1500);
+### 1.3 — Private list check (headless)
 
-let noNewCount = 0, lastTotal = 0;
-for (let i = 0; i < 100; i++) {
-  await page.evaluate(() => {
-    document.querySelectorAll('[data-testid="UserCell"]').forEach(cell => {
-      const links = cell.querySelectorAll('a[href^="/"]');
-      let handle = '';
-      links.forEach(l => {
-        const href = l.getAttribute('href');
-        if (href && href.match(/^\/[^/?]+$/) && !href.startsWith('/i/')) handle = href.slice(1);
-      });
-      if (!handle) return;
-      const nameEl = cell.querySelector('[dir="ltr"] > span:first-child');
-      window._following[handle] = nameEl ? nameEl.textContent.trim() : handle;
-    });
-  });
-  const total = await page.evaluate(() => Object.keys(window._following).length);
-  await page.evaluate(() => window.scrollBy(0, 600));
-  await page.waitForTimeout(800);
-  if (total === lastTotal) { if (++noNewCount >= 5) break; } else noNewCount = 0;
-  lastTotal = total;
-}
-const following = await page.evaluate(() => window._following);
-```
+Always runs when source is a list URL:
+
+1. `playwright-headless:browser_navigate` → list URL
+2. Error / empty / "This list doesn't exist" → **stop and report to user**: *"List at [URL] appears to be private or inaccessible with this account. Please check the URL or switch to an account with access."*
+3. List loads with posts → proceed to scraping
 
 ---
 
-## Step 4 — Scrape the feed
+## Bundled Resources
+
+| Asset | Purpose |
+|-------|---------|
+| `assets/scrape-loop.js` | Self-contained scroll + extract loop executed via single `browser_run_code` call |
+
+---
+
+## Step 2 — Scrape the feed (single-call)
 
 ### Source selection
 
 Based on the `source` input:
 
-- **Following feed** (default): Navigate to `https://x.com/home`, click the **Following** tab, then scroll.
-- **X list URL**: Navigate directly to the list URL (e.g. `https://x.com/i/lists/123456`). No tab switching needed — just scroll the list feed.
+- **Following feed** (default): Navigate to `https://x.com/home` with `playwright-headless:browser_navigate`, click the **Following** tab, then scroll.
+- **X list URL**: Navigate directly to the list URL with `playwright-headless:browser_navigate`. No tab switching needed — just scroll the list feed.
 
 ### Parameters
 - `days` — lookback window (default: **1**)
 - Post types: **original posts only** (skip retweets and replies)
 
 No per-account cap and no news outlet blocklist by default. Capture everything during the
-scroll pass. Filtering happens at the analysis stage. All posts are collected; low-value
-ones are filtered at the analysis stage.
+scroll pass. Filtering happens at the analysis stage.
 
-### Feed scrape (with external links and images)
+### 2a. Read the scrape script
 
-```js
-const startTime = Date.now();
-const cutoff = startTime - days * 24 * 60 * 60 * 1000;
+Read `.claude/skills/x-scrape/assets/scrape-loop.js` with the Read tool.
 
-await page.evaluate(({ cutoff }) => {
-  window._cfg = { cutoff };
-  window._posts = {};
-}, { cutoff });
+### 2b. Execute scrape (single `browser_run_code` call)
 
-await page.evaluate(() => window.scrollTo(0, 0));
-await page.waitForTimeout(1500);
+Build the code string and pass it to `playwright-headless:browser_run_code`:
 
-let done = false, noNewCount = 0;
-
-for (let i = 0; i < 200 && !done; i++) {
-  const reachedEnd = await page.evaluate(() => {
-    const { cutoff } = window._cfg;
-    const articles = document.querySelectorAll('article[data-testid="tweet"]');
-    let allOld = true;
-
-    articles.forEach(article => {
-      // Skip retweets and replies
-      if (article.querySelector('[data-testid="socialContext"]')) return;
-      if (article.innerText.includes('Replying to')) return;
-
-      const timeEl = article.querySelector('time');
-      const linkEl = article.querySelector('a[href*="/status/"]');
-      if (!timeEl || !linkEl) return;
-
-      const handle = (linkEl.href.match(/x\.com\/([^/]+)\/status\//) || [])[1];
-      if (!handle) return;
-
-      const postTime = new Date(timeEl.getAttribute('datetime')).getTime();
-      if (postTime < cutoff) return;
-      allOld = false;
-
-      if (!window._posts[handle]) window._posts[handle] = [];
-
-      const alreadyAdded = window._posts[handle].some(p => p.url === linkEl.href);
-      if (alreadyAdded) return;
-
-      // Text content
-      const textEl = article.querySelector('[data-testid="tweetText"]');
-      const text = textEl ? textEl.innerText.trim() : '';
-
-      // Engagement metrics
-      const metrics = {};
-      ['reply', 'retweet', 'like'].forEach(action => {
-        const btn = article.querySelector(`[data-testid="${action}"]`);
-        if (btn) {
-          const countEl = btn.querySelector('[data-testid]') || btn;
-          const num = countEl.textContent.trim();
-          metrics[action] = num || '0';
-        }
-      });
-
-      // External links
-      const externalLinks = [];
-      if (textEl) {
-        textEl.querySelectorAll('a[href]').forEach(a => {
-          const href = a.href;
-          if (href && !href.includes('x.com/') && !href.includes('twitter.com/')) {
-            externalLinks.push({ url: href, text: a.textContent.trim() });
-          }
-        });
-      }
-      const cardLink = article.querySelector('[data-testid="card.wrapper"] a[href]');
-      if (cardLink && !cardLink.href.includes('x.com/') && !cardLink.href.includes('twitter.com/')) {
-        const alreadyHave = externalLinks.some(l => l.url === cardLink.href);
-        if (!alreadyHave) {
-          externalLinks.push({ url: cardLink.href, text: cardLink.textContent.trim() });
-        }
-      }
-
-      // Image URLs
-      const images = [];
-      article.querySelectorAll('[data-testid="tweetPhoto"] img').forEach(img => {
-        if (img.src) images.push(img.src);
-      });
-
-      window._posts[handle].push({
-        text: text.slice(0, 800),
-        time: timeEl.getAttribute('datetime'),
-        url: linkEl.href,
-        externalLinks,
-        images,
-        metrics
-      });
-    });
-
-    return allOld;
-  });
-
-  if (reachedEnd) { if (++noNewCount >= 3) { done = true; } } else noNewCount = 0;
-  await page.evaluate(() => window.scrollBy(0, 800));
-  await page.waitForTimeout(1000);
-}
-
-const posts   = await page.evaluate(() => window._posts);
-const endTime = Date.now();
 ```
+async (page) => {
+  await page.evaluate(cfg => { window._scrapeConfig = cfg; }, {
+    days: DAYS_VALUE,
+    outputFile: 'ABSOLUTE_PATH/outputs/{filename}-scrape-{YYYY-MM-DD}.json'
+  });
+  SCRAPE_LOOP_JS_CONTENTS
+}
+```
+
+Where:
+- `DAYS_VALUE` is the numeric days from config
+- `ABSOLUTE_PATH` is the full project root path (e.g. `C:/Users/zzyy/Desktop/x-digest`) — required because the playwright MCP server's CWD may differ
+- `{filename}` is the `filename` value from list config
+- `SCRAPE_LOOP_JS_CONTENTS` is the full file contents read in 2a
+
+Returns `{ startTime, endTime, stats, error }`. Posts are written to the output file via Playwright's download API (`page.waitForEvent('download')` + `download.saveAs()`) — they do NOT pass through the MCP response.
+
+If `error` is non-null, log it but continue with partial results (the file will contain whatever was collected before the error).
+
+### 2c. Record timing
+
+Save `startTime` and `endTime` from the result for downstream use.
 
 ---
 
@@ -210,8 +133,7 @@ const endTime = Date.now();
 
 This skill produces:
 
-- **`posts`** — object keyed by handle, each value an array of post objects with: `text`, `time`, `url`, `externalLinks`, `images`, `metrics`
-- **`following`** — object mapping handle → display name
+- **`outputs/{filename}-scrape-{YYYY-MM-DD}.json`** — file keyed by handle, each value an array of post objects with: `text`, `time`, `url`, `displayName`, `externalLinks`, `images`, `metrics`
 - **Scrape timing** — `startTime` and `endTime` timestamps
 
 ---
@@ -220,16 +142,19 @@ This skill produces:
 
 | Situation | Handling |
 |-----------|----------|
-| No session | Fall back to headed login (Step 2) |
+| Not logged in | Headed login via `playwright` MCP (Step 1.2) |
+| Wrong account logged in | Clear session, headed login with correct account |
+| Session expires mid-run | Re-run Step 1.2 |
+| Private/inaccessible list | Stop and report to user |
+| account unset or "main" | Accept whatever account is logged in |
 | List URL invalid or inaccessible | Report error, suggest checking the URL |
-| Very large feed (many posts) | Scroll continues up to 200 iterations; cutoff-based termination handles rest |
+| Very large feed (many posts) | Capped at 1000 posts. Posts accumulate in-memory (collected from browser every 50 scrolls to free browser memory), written to disk once at the end via blob download. |
+| Browser closed during login | Treat as session saved; proceed to Step 1.1 to verify |
 | User asks for > 7 days lookback | Warn about time; proceed if confirmed |
 
 ---
 
 ## MCP Tool Naming
 
-- **Headless**: `playwright-headless:browser_navigate`, `playwright-headless:browser_run_code`, etc.
-- **Headed**: `playwright:browser_navigate`, `playwright:browser_run_code`, etc.
-
-Both share the same `user-data-dir` — sessions persist across modes.
+- **`playwright:browser_*`** — headed, login only (Step 1.2)
+- **`playwright-headless:browser_*`** — headless, all scraping/navigation/data collection

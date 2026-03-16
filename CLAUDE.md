@@ -4,16 +4,17 @@ Multi-list X feed digest generator. Scrapes feeds, analyzes content, produces ma
 
 ## List Config
 
-Each YAML in `lists/` defines a digest job. Duplicate `lists/example.yaml` to create new lists.
+Each YAML in `lists/` defines a digest job. Duplicate `docs/example.yaml` to create new lists.
 
 ```yaml
 name: "VC Feed"
 enabled: true
 account: "main"              # Optional. Same account = shared browser session.
 source: "following"           # "following" or X list URL
+days: 1                      # Lookback window in days
 prompt: |
   Custom analysis prompt...
-output_dir: "outputs"
+# export_dir: "outputs"         # Where to copy HTML after generation (optional)
 filename: "x-feed-digest"    # Date appended automatically
 ```
 
@@ -26,27 +27,39 @@ filename: "x-feed-digest"    # Date appended automatically
    | Setting | Default |
    |---------|---------|
    | source | User's Following feed |
+   | days | 1 |
    | prompt | VC/startup focused analysis |
-   | output_dir | `outputs` |
+   | export_dir | *(none)* |
    | filename | `x-feed-digest` |
 
-2. **x-scrape** — auth, login, scrape following list + feed posts
-3. **x-analyze** — triage posts, investigate links/images, build skip ledger
-4. **x-digest-output** — generate markdown + HTML digest files
-5. **Export** — if `output_dir` differs from the working directory, copy the `.html` file to `output_dir`. Skip if output was already written there.
-6. **Cleanup** — close all browser sessions, even if a prior step failed:
+2. **x-scrape** — auth, login, scrape feed posts
+3. **Verify browser** — confirm headless browser is still open (re-open if needed) before analysis
+4. **x-analyze** — triage posts, investigate links/images, build skip ledger
+5. **x-digest-output** — generate markdown + HTML digest files
+6. **Export** — if `export_dir` is set in the YAML, copy the `.html` file from `outputs/` to `export_dir`. Skip if not set.
+7. **Cleanup** — close browser sessions, even if a prior step failed:
    - `playwright-headless:browser_close`
-   - `playwright:browser_close` (if headed session was opened for login)
+   - `playwright:browser_close` (if opened during login)
 
-### Data routing
+### Data routing (file-based handoff)
 
-The orchestrator accumulates outputs and routes them to each skill:
+All inter-skill data passes through files in `outputs/`. The orchestrator provides config values and timing only.
 
-| Skill | Receives |
-|-------|----------|
-| x-scrape | `source`, `days`, `account` from config |
-| x-analyze | `posts`, `following` from x-scrape |
-| x-digest-output | `posts`, `following`, scrape timing from x-scrape + analysis notes, skip ledger from x-analyze + config values |
+| Skill | Receives | Produces |
+|-------|----------|----------|
+| x-scrape | `source`, `days`, `account`, `filename` from config | `outputs/{filename}-scrape-{YYYY-MM-DD}.json` |
+| x-analyze | Reads `outputs/{filename}-scrape-{YYYY-MM-DD}.json` + `filename` | `outputs/{filename}-analysis-{YYYY-MM-DD}.json` |
+| x-digest-output | Reads both JSON files + config values + scrape timing + `filename` | `outputs/{filename}-{YYYY-MM-DD}.md` + `.html` |
+
+The orchestrator passes `filename` to all skills for consistent file naming across the pipeline.
+
+### Conversation output rules
+
+- **After x-scrape:** One line only, e.g. "Scraped 286 posts from 24 accounts."
+- **After x-analyze:** One line only, e.g. "Analysis complete. 3 links investigated."
+- **After x-digest-output:** Present the HTML file path to the user.
+- **Between steps:** No intermediate batch counts, scroll progress, or tool result narration — just the outcome.
+- **x-digest-output reads from files**, not from conversation context. Never paste file contents into the conversation for the output skill to consume.
 
 ## User Commands
 
@@ -54,19 +67,19 @@ The orchestrator accumulates outputs and routes them to each skill:
 - **All enabled**: "run all digests" — reads `lists/*.yaml` where `enabled: true`
 - **Default**: "digest my feed" — Following feed, default VC-oriented prompt
 
-### Account-aware parallel execution
+### Sequential multi-list execution
 
 When running all enabled lists:
 
-1. Group enabled lists by `account` (default: all share one account)
-2. **Same account** → run in parallel (shared browser session, each gets its own page)
-3. **Different accounts** → run sequentially (different login sessions needed)
-4. If a session expires mid-run, pause that account group, do headed login, resume
+1. Process lists sequentially — each list completes its full pipeline (scrape → analyze → digest) before the next starts
+2. Both `playwright` and `playwright-headless` MCP servers share the same session directory
+3. If the next list needs a different `account`, clear the session directory (`C:\Users\zzyy\playwright-session\Default`) and re-login before starting that list
+4. If a session expires mid-run, re-run the login flow before continuing
 
 ## Dependencies
 
-**MCP servers**: `playwright-headless` (scraping) and `playwright` (headed login). Both share the same `user-data-dir`.
+**MCP servers**: `playwright` (headed, login only) + `playwright-headless` (headless, scraping). Both share session directory.
 
 ## Output
 
-`{output_dir}/{filename}-YYYY-MM-DD.md` + `.html` per list config.
+All artifacts saved to `outputs/` first: `outputs/{filename}-YYYY-MM-DD.md` + `.html`. If `export_dir` is set, HTML is copied there.

@@ -28,14 +28,14 @@ element's inline CSS. The template wraps the final HTML body.
 
 ## Input Contract
 
-Expects from upstream skills:
+Reads from files produced by upstream skills:
 
-- **`posts`** — raw post data (keyed by handle) from x-scrape
-- **`following`** — handle -> display name map from x-scrape
-- **Analysis notes** — per-handle enriched notes from x-analyze
-- **Skip ledger** — categorized skips from x-analyze
-- **Config values** — `name`, `prompt`, `output_dir`, `filename` from pipeline orchestrator
-- **Scrape timing** — `startTime` and `endTime` from x-scrape (for metadata table)
+- **`outputs/{filename}-scrape-{YYYY-MM-DD}.json`** — raw post data (keyed by handle) from x-scrape
+- **`outputs/{filename}-analysis-{YYYY-MM-DD}.json`** — analysis notes, link summaries, and skip ledger from x-analyze
+- **Config values** — `name`, `prompt`, `filename` from pipeline orchestrator
+- **Scrape timing** — `startTime` and `endTime` from orchestrator (for metadata table)
+
+**First step:** Read both JSON files. Do NOT rely on conversation context for post data or analysis notes.
 
 ---
 
@@ -55,13 +55,15 @@ A markdown table at the top, immediately after the `#` title:
 
 | Field | Value |
 |-------|-------|
-| Report generated | datetime in local timezone |
+| Report generated | datetime in ICT (Indochina Time, UTC+7) — must reflect the actual current time when the report is generated, e.g. "March 16, 2026 7:10 PM ICT" |
 | Period | e.g. "Last 24 hours (Mar 3–4, 2026)" |
-| Source | @username / list name (N members) |
+| Source | For list: `[List Name](https://x.com/i/lists/ID) by @username (N members)` / For following: `[@username](https://x.com/username) Following feed`. Link must work in both markdown and HTML. Source URL comes from config `source` field. |
 | Posts captured | N posts from N accounts |
 | External links found | N links (N analyzed in depth) |
 | Images found | N images across posts |
 ```
+
+Always use ICT. Do not use UTC or other timezones.
 
 ---
 
@@ -70,7 +72,11 @@ A markdown table at the top, immediately after the `#` title:
 ```markdown
 ## [Digest Name from config, or "VC Feed Digest"]
 
-Opening 2-3 sentence executive summary with **bold emphasis** on dominant storylines.
+**What happened:** 2-3 sentences summarizing the dominant stories and themes of the period.
+Professional analyst tone — direct, specific, no filler.
+
+**What to watch:** 2-3 sentences on emerging risks, developing situations, or things
+that could escalate or matter in coming days. Forward-looking and actionable.
 
 ### [Themed subsection title]
 
@@ -88,8 +94,11 @@ memo. Synthesize across accounts — if three people discuss the same fundraise,
 perspectives into one paragraph. Be direct, specific, opinionated. Reference actual handles.
 No filler. Say what happened and what it means.
 
-**Hyperlinks**: Embed naturally as descriptive phrases. Roughly one link per sentence in
-data-heavy paragraphs.
+**Hyperlinks and attribution**:
+- Use display names (e.g., "Ming-Chi Kuo") as visible link text, linked to the profile URL (`https://x.com/{handle}`).
+- Post-specific claims link to the actual post URL from the scrape/analysis data — never construct or guess URLs.
+- Example: `[Ming-Chi Kuo](https://x.com/mingchikuo) [reports](https://x.com/mingchikuo/status/REAL_ID) that...`
+- Roughly one link per sentence in data-heavy paragraphs.
 
 **Length**: 2-4 pages equivalent. Substantive enough to be useful, short enough to read
 in 5 minutes.
@@ -115,16 +124,30 @@ Include hyperlinked @handles. Half a page max.
 
 ---
 
+## URL Verification (mandatory before writing)
+
+Before generating digest content, build a URL lookup map from the scrape file:
+
+1. Read `outputs/{filename}-scrape-{YYYY-MM-DD}.json`
+2. Build a map: `handle → [{text_prefix (first 60 chars), url}]`
+3. When writing the digest, every post URL (`x.com/.../status/...`) MUST be looked up from this map — match by handle + text substring
+4. **Never construct or guess status URLs.** If you can't find a matching URL in the map, omit the link rather than fabricate one.
+
+**Post-write verification step:**
+1. Grep the generated markdown for all `x.com/.*/status/` URLs
+2. Check each against the scrape JSON — every URL must exist in the file
+3. If any don't match, fix them (look up the correct URL from the map) and re-save
+
+---
+
 ## Build Pipeline
 
-All using config values for `output_dir` and `filename`:
+All artifacts are saved to `outputs/`:
 
-1. Save markdown to `{output_dir}/{filename}-{YYYY-MM-DD}.md`
+1. Save markdown to `outputs/{filename}-{YYYY-MM-DD}.md`
 2. Read `assets/digest-html-styles.md` and convert markdown -> HTML with inline styles only (no CSS classes, no `<style>` blocks)
 3. Read `assets/digest-html-template.html`, replace `{content}` placeholder with converted HTML
-4. Save to `{output_dir}/{filename}-{YYYY-MM-DD}.html`
-
-Present the HTML file path to the user.
+4. Save to `outputs/{filename}-{YYYY-MM-DD}.html`
 
 ---
 
@@ -138,9 +161,10 @@ Before presenting, quality-check the HTML file:
    natural descriptive link text (not "[link]", raw URLs, or clustered at paragraph ends).
 3. **Inline styles only**: Verify no `<style>` blocks, no CSS classes — only `style=""`
    attributes on elements.
-4. **Tone and prose quality**: Re-read the opening paragraph and one subsection. Flag
+4. **Post URL accuracy**: Spot-check 3 post URLs against the scrape JSON to confirm they match exactly. No fabricated or guessed URLs.
+5. **Tone and prose quality**: Re-read the opening paragraph and one subsection. Flag
    and rewrite any feed-dump patterns.
-5. **Completeness**: Metadata table numbers match actual scraping results.
+6. **Completeness**: Metadata table numbers match actual scraping results.
 
 If any check fails, fix the issue and re-save. Then present the final version.
 
@@ -148,7 +172,6 @@ If any check fails, fix the issue and re-save. Then present the final version.
 
 ## Output Contract
 
-- **Markdown file**: `{output_dir}/{filename}-YYYY-MM-DD.md`
-- **HTML file**: `{output_dir}/{filename}-YYYY-MM-DD.html`
+- **Markdown file**: `outputs/{filename}-YYYY-MM-DD.md`
+- **HTML file**: `outputs/{filename}-YYYY-MM-DD.html`
 
-Present the HTML file path to the user when complete.
