@@ -78,6 +78,15 @@ Professional analyst tone — direct, specific, no filler.
 **What to watch:** 2-3 sentences on emerging risks, developing situations, or things
 that could escalate or matter in coming days. Forward-looking and actionable.
 
+**Due diligence:** 3-5 tight, one-sentence analyst flags. For each flag, do one of:
+(a) run a quick web search to verify and state the finding, or
+(b) clearly state the uncertainty and its source.
+Flag types: single-source scoops, unverified numbers, forward projections without
+supporting data, hype signals, conflicting claims. Also note important related
+developments or context NOT covered in this feed — be precise that it's absent from
+*this feed*, not necessarily unreported elsewhere. Every flag must name the specific
+claim and why it needs scrutiny.
+
 ### [Themed subsection title]
 
 1-2 paragraphs of flowing prose synthesizing what was said, who said it, and why it

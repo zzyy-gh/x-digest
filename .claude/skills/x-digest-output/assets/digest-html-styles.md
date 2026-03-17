@@ -1,6 +1,8 @@
 # HTML Inline Style Reference
 
-All styles must be inline (`style=""` attributes) for email client compatibility — no `<style>` block, no CSS classes, no CSS variables.
+All styles must be inline (`style=""` attributes) for maximum portability — no `<style>` block, no CSS classes, no CSS variables.
+
+**Restricted elements** (do not use): `<ul>`, `<ol>`, `<blockquote>`, `<code>`, `<hr>`, `<img>`. Use styled `<div>` and `<p>` elements instead.
 
 ## Markdown -> HTML mapping
 
@@ -8,11 +10,13 @@ All styles must be inline (`style=""` attributes) for email client compatibility
 - `## heading` -> `<h2 style="font-size:20px; font-weight:600; margin:40px 0 16px 0; color:#1a1a2e; text-transform:uppercase; letter-spacing:0.05em;">`
 - `### heading` -> `<h3 style="font-size:17px; font-weight:600; margin:28px 0 8px 0; color:#1a1a2e; border-left:3px solid #364fc7; padding-left:12px;">`
 - Body paragraphs -> `<p style="font-size:15px; color:#495057; margin:0 0 12px 0; line-height:1.7;">`
-- Opening summary paragraph -> `<div style="background-color:#edf2ff; border-left:4px solid #364fc7; padding:16px 20px; margin:24px 0; font-size:15px; color:#495057; line-height:1.7;">...</div>`
+- "What happened" block -> `<div style="background-color:#edf2ff; border-left:4px solid #364fc7; padding:16px 20px; margin:24px 0 12px 0; font-size:15px; color:#495057; line-height:1.7;">...</div>`
+- "What to watch" block -> `<div style="background-color:#edf2ff; border-left:4px solid #364fc7; padding:16px 20px; margin:0 0 12px 0; font-size:15px; color:#495057; line-height:1.7;">...</div>`
+- "Due diligence" block -> `<div style="background-color:#fff3bf; border-left:4px solid #e67700; padding:16px 20px; margin:0 0 24px 0; font-size:14px; color:#495057; line-height:1.7;">...</div>`
 - Metadata table -> `<table style="width:100%; border-collapse:collapse; font-size:14px; margin-bottom:24px;">` with:
   - Label cells: `<td style="background-color:#f1f3f5; padding:8px 12px; font-weight:600; color:#495057; border:1px solid #dee2e6; width:200px;">`
   - Value cells: `<td style="padding:8px 12px; color:#495057; border:1px solid #dee2e6;">`
-- Skipped content categories -> `<div style="background-color:#f8f9fa; border:1px solid #dee2e6; padding:16px 20px; margin-bottom:12px; font-size:14px; color:#495057;">...</div>`
+- Skipped content categories (every non-empty line after `## Skipped Content` must use this box style — bold labels may be long) -> `<div style="background-color:#f8f9fa; border:1px solid #dee2e6; padding:16px 20px; margin-bottom:12px; font-size:14px; color:#495057;">...</div>`
 - `**bold**` -> `<strong style="color:#1a1a2e;">`
 - `*italic*` -> `<em>`
 - `[text](url)` -> `<a href="url" style="color:#1971c2; text-decoration:none;">`

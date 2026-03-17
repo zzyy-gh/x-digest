@@ -1,5 +1,7 @@
 outputs/*.docx
 outputs/*.html
+outputs/*.json
 outputs/*.md
 .env
 node_modules/
+.playwright-mcp/

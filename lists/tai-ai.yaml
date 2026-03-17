@@ -7,5 +7,5 @@ prompt: |
   and items a VC might directly or indirectly benefit from knowing.
   Cover model releases, infrastructure shifts, policy/regulation,
   funding rounds, product launches, and strategic moves by major players.
-output_dir: "C:\\Users\\zzyy\\OneDrive\\aiconic\\daily feed\\tai x ai list daily feed"
+export_dir: "C:\\Users\\zzyy\\OneDrive\\aiconic\\daily feed\\tai x ai list daily feed"
 filename: "tai-ai"

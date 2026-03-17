@@ -1,0 +1,12 @@
+name: "Mod Research"
+enabled: true
+account: "main"
+source: "https://x.com/i/lists/2033438404738978156"
+prompt: |
+  Focus on AI technological updates and research developments.
+  Prioritize breakthroughs, new model architectures, training techniques,
+  benchmark results, and infrastructure advances.
+  Write with a VC perspective — highlight what's commercially relevant,
+  what shifts the competitive landscape, and what signals emerging opportunities.
+export_dir: "C:\\Users\\zzyy\\OneDrive\\aiconic\\daily feed\\mod x research list daily feed"
+filename: "mod-research"
