@@ -12,7 +12,6 @@ All styles must be inline (`style=""` attributes) for maximum portability — no
 - Body paragraphs -> `<p style="font-size:15px; color:#495057; margin:0 0 12px 0; line-height:1.7;">`
 - "What happened" block -> `<div style="background-color:#edf2ff; border-left:4px solid #364fc7; padding:16px 20px; margin:24px 0 12px 0; font-size:15px; color:#495057; line-height:1.7;">...</div>`
 - "What to watch" block -> `<div style="background-color:#edf2ff; border-left:4px solid #364fc7; padding:16px 20px; margin:0 0 12px 0; font-size:15px; color:#495057; line-height:1.7;">...</div>`
-- "Due diligence" block -> `<div style="background-color:#fff3bf; border-left:4px solid #e67700; padding:16px 20px; margin:0 0 24px 0; font-size:14px; color:#495057; line-height:1.7;">...</div>`
 - Metadata table -> `<table style="width:100%; border-collapse:collapse; font-size:14px; margin-bottom:24px;">` with:
   - Label cells: `<td style="background-color:#f1f3f5; padding:8px 12px; font-weight:600; color:#495057; border:1px solid #dee2e6; width:200px;">`
   - Value cells: `<td style="padding:8px 12px; color:#495057; border:1px solid #dee2e6;">`
