@@ -53,14 +53,14 @@ A markdown table at the top, immediately after the `#` title:
 ```markdown
 # X Feed Digest — [date range]
 
-| Field | Value |
-|-------|-------|
-| Report generated | datetime in ICT (Indochina Time, UTC+7) — must reflect the actual current time when the report is generated, e.g. "March 16, 2026 7:10 PM ICT" |
-| Period | e.g. "Last 24 hours (Mar 3–4, 2026)" |
-| Source | For list: `[List Name](https://x.com/i/lists/ID) by @username (N members)` / For following: `[@username](https://x.com/username) Following feed`. Link must work in both markdown and HTML. Source URL comes from config `source` field. |
-| Posts captured | N posts from N accounts |
-| External links found | N links (N analyzed in depth) |
-| Images found | N images across posts |
+| Field                | Value                                                                                                                                                                                                                                    |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Report generated     | datetime in ICT (Indochina Time, UTC+7) — must reflect the actual current time when the report is generated, e.g. "March 16, 2026 7:10 PM ICT"                                                                                           |
+| Period               | e.g. "Last 24 hours (Mar 3–4, 2026)"                                                                                                                                                                                                     |
+| Source               | For list: `[List Name](https://x.com/i/lists/ID) by @username (N members)` / For following: `[@username](https://x.com/username) Following feed`. Link must work in both markdown and HTML. Source URL comes from config `source` field. |
+| Posts captured       | N posts from N accounts                                                                                                                                                                                                                  |
+| External links found | N links (N analyzed in depth)                                                                                                                                                                                                            |
+| Images found         | N images across posts                                                                                                                                                                                                                    |
 ```
 
 Always use ICT. Do not use UTC or other timezones.
@@ -72,23 +72,13 @@ Always use ICT. Do not use UTC or other timezones.
 ```markdown
 ## [Digest Name from config, or "VC Feed Digest"]
 
-**What happened:** 2-3 sentences summarizing the dominant stories and themes of the period.
-Professional analyst tone — direct, specific, no filler.
+**What happened:** 2-3 sentences summarizing the dominant stories and themes of the period. Professional analyst tone — direct, specific, no filler.
 
-**What to watch:** 2-3 sentences on emerging risks, developing situations, or things
-that could escalate or matter in coming days. Forward-looking and actionable.
-Weave in macro-level due diligence: important context absent from this feed,
-conflicting narratives across sources, and systemic uncertainties worth flagging.
+**What to watch:** 2-3 sentences on emerging risks, developing situations, or things that could escalate or matter in coming days. Forward-looking and actionable.
 
 ### [Themed subsection title]
 
-1-2 paragraphs of flowing prose synthesizing what was said, who said it, and why it
-matters. Weave in external-link and image insights naturally. Inline-hyperlink every
-key claim to its source post. Where a claim relies on a single source, cites
-unverified numbers, or makes forward projections without supporting data, flag it
-inline (e.g., "though this figure hasn't been independently confirmed" or
-"notably sourced from a single account"). Keep flags brief and natural — they
-should read as analyst judgment, not disclaimers.
+1-2 paragraphs of flowing prose synthesizing what was said, who said it, and why it matters. Weave in external-link and image insights naturally. Inline-hyperlink every key claim to its source post.
 
 ### [Another themed subsection]
 
@@ -101,6 +91,7 @@ perspectives into one paragraph. Be direct, specific, opinionated. Reference act
 No filler. Say what happened and what it means.
 
 **Hyperlinks and attribution**:
+
 - Use display names (e.g., "Ming-Chi Kuo") as visible link text, linked to the profile URL (`https://x.com/{handle}`).
 - Post-specific claims link to the actual post URL from the scrape/analysis data — never construct or guess URLs.
 - Example: `[Ming-Chi Kuo](https://x.com/mingchikuo) [reports](https://x.com/mingchikuo/status/REAL_ID) that...`
@@ -140,6 +131,7 @@ Before generating digest content, build a URL lookup map from the scrape file:
 4. **Never construct or guess status URLs.** If you can't find a matching URL in the map, omit the link rather than fabricate one.
 
 **Post-write verification step:**
+
 1. Grep the generated markdown for all `x.com/.*/status/` URLs
 2. Check each against the scrape JSON — every URL must exist in the file
 3. If any don't match, fix them (look up the correct URL from the map) and re-save
@@ -151,9 +143,48 @@ Before generating digest content, build a URL lookup map from the scrape file:
 All artifacts are saved to `outputs/`:
 
 1. Save markdown to `outputs/{filename}-{YYYY-MM-DD}.md`
-2. Read `assets/digest-html-styles.md` and convert markdown -> HTML with inline styles only (no CSS classes, no `<style>` blocks)
-3. Read `assets/digest-html-template.html`, replace `{content}` placeholder with converted HTML
-4. Save to `outputs/{filename}-{YYYY-MM-DD}.html`
+2. **Due diligence review** (see below) — re-read and flag, update markdown in place
+3. Read `assets/digest-html-styles.md` and convert markdown -> HTML with inline styles only (no CSS classes, no `<style>` blocks)
+4. Read `assets/digest-html-template.html`, replace `{content}` placeholder with converted HTML
+5. Save to `outputs/{filename}-{YYYY-MM-DD}.html`
+
+---
+
+## Due Diligence Review
+
+After saving the markdown, re-read `outputs/{filename}-{YYYY-MM-DD}.md` and scan **both
+themed subsections and the "What to watch" block** for:
+
+- Unverified stats or imprecise figures (e.g., "revenue doubled" with no source)
+- Vague or second-hand attribution (e.g., "X allegedly said", "reportedly")
+- Assertions that contradict known data or consensus
+- Macro claims presented as fact without evidence
+- New or emerging technology claims touted with specific capabilities that haven't been
+  independently tested or proven (e.g., "this model can replace all junior devs" without benchmarks)
+- Forward projections stated as certainties (e.g., "AI will eliminate 50% of jobs by 2028")
+  without caveats or supporting analysis
+
+For each genuine concern, append a brief italic parenthetical. Keep flags natural and
+concise — they should read as analyst judgment, not disclaimers:
+_(single-source — not independently confirmed)_
+_(this signal relies on the unverified claim above)_
+
+Do not force flags where none exist. Update the markdown file in place before proceeding
+to HTML generation.
+
+**"What to watch" block** — bigger-picture scrutiny. The signals synthesized here draw
+from the subsection content, so also consider:
+
+- Whether a "What to watch" signal rests on a flagged claim from a subsection (if so, note the dependency)
+- Consensus illusion: multiple accounts repeating the same narrative may look like convergence but trace back to one unverified source
+- Selection bias: the set of posts may overweight one perspective — note if the "What to watch" signals only reflect one side
+- Extrapolation leaps: a real per-post data point being stretched into a broad trend without supporting evidence
+- Missing context: important context absent from this feed that would materially change the picture (e.g., a major counterargument, a relevant regulatory development, or key data not mentioned)
+- Conflicting narratives: sources in this feed that contradict each other — surface the tension rather than picking a side
+- Systemic uncertainties: structural unknowns worth flagging that no single source can resolve (e.g., regulatory outcomes, macro shifts, unproven market assumptions)
+
+No italic parenthetical needed here — just apply judgment and flag any signals that seem
+overhyped, under-evidenced, or one-sided with a brief note in the text.
 
 ---
 
@@ -180,4 +211,3 @@ If any check fails, fix the issue and re-save. Then present the final version.
 
 - **Markdown file**: `outputs/{filename}-YYYY-MM-DD.md`
 - **HTML file**: `outputs/{filename}-YYYY-MM-DD.html`
-
