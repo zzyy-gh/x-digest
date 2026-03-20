@@ -41,6 +41,14 @@ filename: "x-feed-digest"    # Date appended automatically
    - `playwright-headless:browser_close`
    - `playwright:browser_close` (if opened during login)
 
+### Timezone
+
+All dates and times in the pipeline use the **device's local timezone**:
+
+- Filename date suffixes (`YYYY-MM-DD`) are computed in the local timezone
+- The "Report generated" timestamp and "Period" dates in the metadata table use the local timezone
+- Displayed timestamps must include the timezone offset, e.g. `"March 20, 2026 7:10 PM UTC+8"`
+
 ### Data routing (file-based handoff)
 
 All inter-skill data passes through files in `outputs/`. The orchestrator provides config values and timing only.

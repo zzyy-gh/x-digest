@@ -55,15 +55,13 @@ A markdown table at the top, immediately after the `#` title:
 
 | Field                | Value                                                                                                                                                                                                                                    |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Report generated     | datetime in ICT (Indochina Time, UTC+7) — must reflect the actual current time when the report is generated, e.g. "March 16, 2026 7:10 PM ICT"                                                                                           |
+| Report generated     | Must reflect the actual current time when the report is generated — timezone comes from the orchestrator                                                                                                                                     |
 | Period               | e.g. "Last 24 hours (Mar 3–4, 2026)"                                                                                                                                                                                                     |
 | Source               | For list: `[List Name](https://x.com/i/lists/ID) by @username (N members)` / For following: `[@username](https://x.com/username) Following feed`. Link must work in both markdown and HTML. Source URL comes from config `source` field. |
 | Posts captured       | N posts from N accounts                                                                                                                                                                                                                  |
 | External links found | N links (N analyzed in depth)                                                                                                                                                                                                            |
 | Images found         | N images across posts                                                                                                                                                                                                                    |
 ```
-
-Always use ICT. Do not use UTC or other timezones.
 
 ---
 
