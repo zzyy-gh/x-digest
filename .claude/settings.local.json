@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx:*)",
+      "Bash(curl:*)",
+      "Bash(dd:*)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_close",
+      "mcp__playwright__browser_wait_for",
+      "mcp__playwright__browser_run_code",
+      "mcp__playwright-headless__browser_navigate",
+      "mcp__playwright-headless__browser_wait_for",
+      "mcp__playwright-headless__browser_click",
+      "mcp__playwright-headless__browser_close",
+      "mcp__playwright-headless__browser_run_code",
+      "mcp__playwright-headless__browser_snapshot",
+      "Bash(grep:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "playwright"
+  ]
+}
