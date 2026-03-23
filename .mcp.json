@@ -1,17 +1,5 @@
 {
   "mcpServers": {
-    "playwright": {
-      "type": "stdio",
-      "command": "cmd",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "@playwright/mcp@latest",
-        "--user-data-dir",
-        "C:/Users/zzyy/playwright-session"
-      ]
-    },
     "playwright-headless": {
       "type": "stdio",
       "command": "cmd",
@@ -20,9 +8,7 @@
         "npx",
         "-y",
         "@playwright/mcp@latest",
-        "--headless",
-        "--user-data-dir",
-        "C:/Users/zzyy/playwright-session"
+        "--headless"
       ]
     }
   }

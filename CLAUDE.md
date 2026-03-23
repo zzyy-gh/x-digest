@@ -20,7 +20,7 @@ filename: "x-feed-digest"    # Date appended automatically
 
 ## Pipeline
 
-1. **Load config** — read the list YAML (or use defaults). Scan user prompt for overrides to: scrape source, output format, filename, lookback window, tone/audience. If no overrides found, proceed silently. Only ask clarifying questions when genuinely ambiguous.
+1. **Load config** — read the list YAML (or use defaults). Scan user prompt for overrides to: scrape source, output format, filename, lookback window, tone/audience. If no overrides found, proceed silently. Only ask clarifying questions when genuinely ambiguous. Run `node scripts/now.js` to get the local date for filenames.
 
    Defaults (when no config provided):
 
@@ -32,14 +32,13 @@ filename: "x-feed-digest"    # Date appended automatically
    | export_dir | *(none)* |
    | filename | `x-feed-digest` |
 
-2. **x-scrape** — auth, login, scrape feed posts
-3. **Verify browser** — confirm headless browser is still open (re-open if needed) before analysis
-4. **x-analyze** — triage posts, investigate links/images, build skip ledger
+2. **x-scrape** — runs `scripts/scrape.js` which handles auth, login, and scraping. Browser lifecycle is self-contained.
+3. **Verify browser** — confirm headless MCP browser is still open (re-open if needed) before analysis
+4. **x-analyze** — triage posts, investigate links/images, build skip ledger (uses `playwright-headless` MCP)
 5. **x-digest-output** — generate markdown + HTML digest files
 6. **Export** — if `export_dir` is set in the YAML, copy the `.html` file from `outputs/` to `export_dir`. Skip if not set.
-7. **Cleanup** — close browser sessions, even if a prior step failed:
+7. **Cleanup** — close headless MCP browser session, even if a prior step failed:
    - `playwright-headless:browser_close`
-   - `playwright:browser_close` (if opened during login)
 
 ### Timezone
 
@@ -80,12 +79,13 @@ The orchestrator passes `filename` to all skills for consistent file naming acro
 When running all enabled lists:
 
 1. Process lists sequentially — each list completes its full pipeline before the next starts
-2. Both `playwright` and `playwright-headless` MCP servers share the same session directory
-3. If a session expires mid-run, re-run the login flow before continuing
+2. `scripts/scrape.js` manages its own browser session; `playwright-headless` MCP (used by x-analyze) runs independently
+3. If a session expires mid-run, the scrape script handles re-login automatically
 
 ## Dependencies
 
-**MCP servers**: `playwright` (headed, login only) + `playwright-headless` (headless, scraping). Both share session directory.
+**Scripts**: `scripts/scrape.js` (auth + scraping), `scripts/now.js` (local time).
+**MCP servers**: `playwright-headless` (headless, used by x-analyze for link investigation).
 
 ## Output
 
